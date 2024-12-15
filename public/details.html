@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goods Details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6">Goods Details</h1>
+    <div id="goodDetails" class="bg-white shadow rounded p-6 mb-8"></div>
+    <h2 class="text-2xl font-bold mb-4">Sales Table</h2>
+    <table id="salesTable" class="table-auto w-full border-collapse border border-gray-300 hidden"></table>
+    <p id="errorMessage" class="text-red-500 mt-4 hidden"></p>
+  </div>
+
+  <script>
+    // Функция для получения параметров из URL
+    function getUrlParameter(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    const goodId = getUrlParameter("id");
+
+    // Функция для загрузки данных о товаре
+    async function loadGoodDetails() {
+      try {
+        const response = await fetch(`/api/goods/${goodId}`);
+        if (!response.ok) throw new Error("Good not found.");
+        const data = await response.json();
+
+        const goodDetails = document.getElementById("goodDetails");
+        goodDetails.innerHTML = `
+          <h2 class="text-2xl font-bold">${data.Name}</h2>
+          <p><strong>Price:</strong> $${data.Price}</p>
+          <p><strong>Quantity:</strong> ${data.Quantity}</p>
+          <p><strong>Producer:</strong> ${data.Producer}</p>
+          <p><strong>Description:</strong> ${data.Description}</p>
+        `;
+      } catch (err) {
+        document.getElementById("errorMessage").textContent =
+          "Error fetching good details. Please try again.";
+        document.getElementById("errorMessage").classList.remove("hidden");
+        console.error(err);
+      }
+    }
+
+    // Функция для загрузки продаж по товару
+    async function loadSalesTable() {
+      try {
+        const response = await fetch(`/api/sales/${goodId}`);
+        if (!response.ok) throw new Error("Sales not found.");
+        const data = await response.json();
+
+        const salesTable = document.getElementById("salesTable");
+        if (!data.length) {
+          salesTable.innerHTML = "<p>No sales data available.</p>";
+          return;
+        }
+
+        // Заполнение таблицы продаж
+        salesTable.innerHTML = `
+          <thead>
+            <tr>
+              <th class="border border-gray-300 px-4 py-2">Sale ID</th>
+              <th class="border border-gray-300 px-4 py-2">Date</th>
+              <th class="border border-gray-300 px-4 py-2">Quantity</th>
+              <th class="border border-gray-300 px-4 py-2">Total Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data
+              .map(
+                (sale) => `
+              <tr>
+                <td class="border border-gray-300 px-4 py-2">${sale.Sale_Id}</td>
+                <td class="border border-gray-300 px-4 py-2">${sale.Date_Sale}</td>
+                <td class="border border-gray-300 px-4 py-2">${sale.Sold_Quantity}</td>
+                <td class="border border-gray-300 px-4 py-2">${sale.Total_Amount}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        `;
+        salesTable.classList.remove("hidden");
+      } catch (err) {
+        document.getElementById("errorMessage").textContent =
+          "Error fetching sales data. Please try again.";
+        document.getElementById("errorMessage").classList.remove("hidden");
+        console.error(err);
+      }
+    }
+
+    // Загружаем данные о товаре и таблицу продаж при загрузке страницы
+    if (goodId) {
+      loadGoodDetails();
+      loadSalesTable();
+    } else {
+      document.getElementById("errorMessage").textContent =
+        "No goods ID provided in the URL.";
+      document.getElementById("errorMessage").classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>

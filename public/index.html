@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Database Operations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Goods</h1>
+        <div id="goodsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6">Database Operations</h1>
+    
+    <!-- 2. Procedure Execution -->
+    <section class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Run Procedures</h2>
+  
+        <!-- Update Goods Discount -->
+        <div class="mb-4">
+          <h3 class="font-bold">Update Goods Discount</h3>
+          <label class="block mt-2">
+            Good Name:
+            <input id="goodName" type="text" class="border rounded p-2 w-full">
+          </label>
+          <label class="block mt-2">
+            Discount Percentage:
+            <input id="discountPercent" type="number" step="1" class="border rounded p-2 w-full">
+          </label>
+          <button onclick="updateGoodsDiscount()" class="bg-blue-500 text-white px-4 py-2 mt-2 rounded">Execute</button>
+          <p id="discountResult" class="mt-2 text-green-600"></p>
+          <div id="goodsTableContainer" class="mt-4"></div>
+        </div>
+      </section>
+    
+    <!-- 3. Function Execution -->
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Run Functions</h2>
+      
+    <!-- Get Largest Order -->
+    <div class="mb-4">
+        <h3 class="font-bold">Get Largest Order</h3>
+        <label class="block mt-2">
+        Good Name:
+        <input id="largestOrderGoodName" type="text" class="border rounded p-2 w-full">
+        </label>
+        <button onclick="getLargestOrder()" class="bg-blue-500 text-white px-4 py-2 mt-2 rounded">Execute</button>
+        <div id="largestOrderResult" class="mt-4"></div>
+    </div>
+  
+      
+      <!-- Get Top Selling Goods -->
+      <div class="mb-4">
+        <h3 class="font-bold">Get Top Selling Goods</h3>
+        <label class="block mt-2">
+          Worker Name:
+          <input id="workerName" type="text" class="border rounded p-2 w-full">
+        </label>
+        <button onclick="getTopSellingGoods()" class="bg-blue-500 text-white px-4 py-2 mt-2 rounded">Execute</button>
+        <div id="topSellingGoodsResult" class="mt-4"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Helpers to render tables
+    function renderTable(containerId, columns, data) {
+      const container = document.getElementById(containerId);
+      if (!data.length) {
+        container.innerHTML = "<p>No data available.</p>";
+        return;
+      }
+      const table = document.createElement("table");
+      table.className = "table-auto w-full border-collapse border border-gray-300 mt-4";
+
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      columns.forEach((col) => {
+        const th = document.createElement("th");
+        th.className = "border border-gray-300 px-4 py-2";
+        th.textContent = col;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      data.forEach((row) => {
+        const tr = document.createElement("tr");
+        columns.forEach((col) => {
+          const td = document.createElement("td");
+          td.className = "border border-gray-300 px-4 py-2";
+          td.textContent = row[col] || "";
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      container.innerHTML = "";
+      container.appendChild(table);
+    }
+
+    // Fetch goods on page load
+    async function loadGoods() {
+      try {
+        const res = await fetch("/api/goods");
+        const goods = await res.json();
+        renderTable("goodsTableContainer", ["Good_Id", "Name", "Price", "Description"], goods);
+      } catch (error) {
+        console.error("Error loading goods:", error);
+      }
+    }
+
+    // Fetch goods after procedure execution
+    async function updateGoodsDiscount() {
+      const goodName = document.getElementById("goodName").value;
+      const discountPercent = document.getElementById("discountPercent").value;
+      try {
+        await fetch("/api/procedures/update-goods-discount", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ goodName, discountPercent }),
+        });
+        document.getElementById("discountResult").textContent = "Goods discount updated successfully!";
+        loadGoods(); // Reload goods table after updating
+      } catch (error) {
+        console.error("Error updating goods discount:", error);
+        document.getElementById("discountResult").textContent = "Error updating goods discount.";
+      }
+    }
+
+    // Fetch largest order details
+    async function getLargestOrder() {
+        const goodName = document.getElementById("largestOrderGoodName").value;
+        try {
+            const res = await fetch(`/api/functions/largest-order?goodName=${goodName}`);
+            const orders = await res.json();
+            renderTable("largestOrderResult", ["Sale_Id", "Check_No", "Good_Name", "Quantity", "Total_Amount", "Date_Sale"], orders);
+        } catch (error) {
+            console.error(error);
+            document.getElementById("largestOrderResult").innerHTML = "An error occurred while fetching data.";
+        }
+    }
+
+    // Fetch top-selling goods
+    async function getTopSellingGoods() {
+      const workerName = document.getElementById("workerName").value;
+      try {
+        const res = await fetch(`/api/functions/top-selling-goods?workerName=${workerName}`);
+        const goods = await res.json();
+        renderTable("topSellingGoodsResult", ["Worker_Name", "Dept_Name", "Good_Name", "Total_Sold"], goods);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    // Fetch goods data from API
+    fetch("/api/goods")
+      .then((response) => response.json())
+      .then((data) => {
+        const goodsList = document.getElementById("goodsList");
+
+        data.forEach((good) => {
+          const goodCard = document.createElement("div");
+          goodCard.className = "bg-white shadow rounded p-4";
+
+          goodCard.innerHTML = `
+            <h2 class="text-xl font-bold">${good.Name}</h2>
+            <p>Price: $${good.Price}</p>
+            <p>Quantity: ${good.Quantity}</p>
+            <p>Producer: ${good.Producer}</p>
+            <p><a href="/details.html?id=${good.Good_Id}" class="text-blue-500">View Details</a></p>
+          `;
+
+          goodsList.appendChild(goodCard);
+        });
+      })
+      .catch((err) => {
+        console.error("Error fetching goods:", err);
+      });
+
+    // Load goods on page load
+    window.onload = loadGoods;
+</script>
+
+</body>
+</html>
